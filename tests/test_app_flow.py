@@ -100,13 +100,14 @@ def test_hard_mode_is_winnable_by_binary_search():
     assert at.session_state.status == "won"
 
 
-def test_hint_shows_outcome_and_direction():
+def test_feedback_states_the_outcome_plainly():
+    # Plain result only; direction and strategy come from the coach.
     at = run_app()
     at.session_state.secret = 50
     submit(at, "80")
-    assert "Too High" in at.warning[0].value and "Go LOWER" in at.warning[0].value
+    assert "too high" in at.warning[0].value and "Go LOWER" not in at.warning[0].value
     submit(at, "20")
-    assert "Too Low" in at.warning[0].value and "Go HIGHER" in at.warning[0].value
+    assert "too low" in at.warning[0].value and "Go HIGHER" not in at.warning[0].value
 
 
 def test_losing_sets_score_to_zero():

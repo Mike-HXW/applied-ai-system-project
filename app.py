@@ -221,8 +221,9 @@ if submit:
         outcome = check_guess(guess_int, st.session_state.secret)
         message = { #FIX: modify the hint message to be consistent to the truth
             "Win": "🎉 Correct!",
-            "Too High": "📉 Too High! Go LOWER!", # FIX: hint shows both the outcome and the direction
-            "Too Low": "📈 Too Low! Go HIGHER!",
+            # States the result plainly; the coach is where direction and strategy come from.
+            "Too High": "📉 Your guess is too high.",
+            "Too Low": "📈 Your guess is too low.",
         }[outcome]
 
         if show_hint:

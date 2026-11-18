@@ -33,3 +33,7 @@ Hit rate: 100%
 
 - Fallback hints that obey their level's rules: 297 of 297
 - Over-sharing model answers blocked at levels 1-2: 198 of 198
+
+## Live model sample
+
+10/10 hints were AI-written and passed the guardrail; 0 fell back to the deterministic hint.

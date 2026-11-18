@@ -1,0 +1,64 @@
+%% System architecture: Number Guesser + RAG Coach
+%% Render with any Mermaid viewer (VS Code Mermaid preview, mermaid.live, GitHub)
+flowchart TB
+    Player(["👤 Player: guesses, clicks Ask Coach or Review"])
+
+    subgraph APP["Streamlit app (app.py + logic_utils.py)"]
+        UI["UI: guess box, coach buttons, score"]
+        Logic["Game logic: parse_guess, check_guess, update_score"]
+        State[("session_state: history, score, hint count")]
+    end
+
+    subgraph COACH["Coach (coach.py): retrieve, then generate, then check"]
+        Gate{"Level gate: Nudge, Range or Best move (code decides)"}
+        Derive["compute_state: remaining range (secret stays here)"]
+        KB[("Knowledge base: knowledge/*.md + generated rules note")]
+        Retriever["Retriever: BM25 over notes allowed at this level"]
+        Analyzer["analyze_guesses: repeat, ruled-out, off-middle (review only)"]
+        Prompt["Prompt builder: only facts this level may reveal"]
+        Guard{"Validator: does the answer stay within its level?"}
+        Fallback["Deterministic fallback hint or review"]
+    end
+
+    LLM[["Gemini API: writes the wording only"]]
+    Out["Hint or review + sources + cost"]
+    Reader(["👤 Player reads the result and decides whether to spend points"])
+
+    subgraph EVAL["Reliability and testing"]
+        Pytest["pytest: unit and UI-flow tests"]
+        Harness["eval_harness.py: every secret, over-sharing model, injected mistakes, retrieval, determinism"]
+        Report[("eval_report.md")]
+    end
+    Dev(["🧑‍💻 Developer: reviews report, tunes levels, costs and notes"])
+
+    %% ---- main flow ----
+    Player -->|"1. input"| UI
+    UI --> Logic --> State
+    UI -->|"2. Ask Coach + history"| Gate
+    Gate --> Derive
+    Derive -->|"3. query from game state"| Retriever
+    KB --> Retriever
+    Retriever -->|"4. top notes"| Prompt
+    UI -->|"Review + history"| Analyzer
+    Analyzer -->|"findings"| Prompt
+    Prompt -->|"5. prompt"| LLM
+    LLM -->|"6. draft text"| Guard
+    Guard -->|"pass"| Out
+    Guard -->|"fail or no API key"| Fallback --> Out
+    Out -->|"7. shown in UI"| Reader
+
+    %% ---- testing and human checks ----
+    Pytest -.->|"tests"| COACH
+    Pytest -.->|"tests"| APP
+    Harness -.->|"simulates"| COACH
+    Harness -.->|"--live: real sample"| LLM
+    Harness --> Report --> Dev
+    Dev -.->|"edits"| KB
+    Reader -.->|"judges hint quality"| Dev
+
+    classDef human fill:#fde68a,stroke:#b45309,color:#000
+    classDef ai fill:#bfdbfe,stroke:#1d4ed8,color:#000
+    classDef check fill:#bbf7d0,stroke:#15803d,color:#000
+    class Player,Reader,Dev human
+    class LLM ai
+    class Guard,Pytest,Harness,Report check
