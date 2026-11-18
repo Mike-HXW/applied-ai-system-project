@@ -83,7 +83,7 @@ def binary_history(secret, low, high, turns):
     return history, lo, hi
 
 
-def make_mistake(history, lo, hi, low, high, kind):
+def make_mistake(history, lo, hi, low, high, kind, secret=None):
     """Return a guess that is exactly `kind` of mistake, or None if impossible."""
     if kind == "repeat":
         return history[-1] if history else None
@@ -91,7 +91,8 @@ def make_mistake(history, lo, hi, low, high, kind):
         candidate = low if lo > low else high if hi < high else None
     else:  # off_middle
         candidate = lo if hi - lo + 1 > 3 else None
-    return candidate if candidate is not None and candidate not in history else None
+    ok = candidate is not None and candidate not in history and candidate != secret
+    return candidate if ok else None
 
 
 def evaluate_analysis():
@@ -110,7 +111,7 @@ def evaluate_analysis():
                     prefix, lo, hi = binary_history(secret, low, high, at_turn - 1)
                     if len(prefix) < at_turn - 1 or check_guess(prefix[-1], secret) == "Win":
                         continue  # game already over before the mistake
-                    bad = make_mistake(prefix, lo, hi, low, high, kind)
+                    bad = make_mistake(prefix, lo, hi, low, high, kind, secret)
                     if bad is None:
                         continue
                     found = analyze_guesses(prefix + [bad], secret, low, high)

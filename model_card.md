@@ -6,6 +6,7 @@
 
 - **The game is already solved.** The best guess is always the middle of the remaining range, so the coach has little real strategy to teach. I made it more useful with a review of the player's own guesses and a three-step hint ladder, but the advice is still simple.
 - **The coach assumes binary search is "good play."** The review flags a guess as "far from the middle" if it removes far fewer possibilities than a middle guess (the cutoff, 1.5 times the ideal, is my own judgment). A player who takes quick lucky guesses or likes risk is marked as making mistakes even though the game allows it. This is a bias built into what I chose to reward.
+- **The "far from the middle" rule is crude in tiny ranges.** In a range of 4 numbers, a wrong guess at either end can still be flagged, even though the difference from a middle guess is small. I fixed the worst case (a winning guess was being flagged), but the rule is still a simple threshold, not a measure of how good a guess was.
 - **Small, hand-written knowledge base.** About a dozen short English notes, searched by keyword (BM25), so paraphrased situations can be missed. My first version retrieved the wrong note for mid-game states.
 - **Only three kinds of mistake** (repeated guess, guess already ruled out, guess far from the middle) and only English output.
 - **Limited evidence for the live model.** The live check was 10 hints, all of which passed the validator. That shows the prompts work, but it is too small to show the model never breaks the rules. The harness also tests mistakes I defined myself, so it checks consistency, not whether a human agrees these are mistakes.
@@ -26,6 +27,7 @@ The risk is low, because the app only takes numbers and the model only sees game
 
 - **Fixing one retrieval case broke another.** The harness scored retrieval at 80%. Fixing the missed "narrowing the range" note made a different case ("small range") fail, until I weighted the situation-specific query terms. It showed me why a labelled test set matters: I could not see this by trying a few hints by hand.
 - **A UI bug that playing would not have found.** A UI test showed that the Ask Coach button stayed enabled on the guess that ended the game, because it was drawn before the guess was scored.
+- **My own review flagged a winning guess as a mistake.** While writing a README example from a real game (guesses 23, 33, 83, 93, 88, 84 with the secret 84), the review said the final, correct guess was "far from the middle." The harness had not caught this, because it only tests mistakes I injected myself. I fixed it so a winning guess is never flagged and added a test, and it showed me that a real game finds edge cases my simulated ones do not.
 - **The live model passed every time.** In the 10 live hints, none needed the fallback. The guardrail's value showed up mainly in the simulated tests, where a fake over-sharing model was blocked 198 of 198 times. I also found that Google's Gemini docs had changed to a new API since I last knew it, so I had to check the current docs instead of relying on memory.
 
 ## Collaboration with AI

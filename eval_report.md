@@ -23,11 +23,11 @@ Hit rate: 100%
 ## Mistake detection (review feature)
 
 - Perfect binary-search players flagged: 0 of 170 games (target 0)
-- Injected mistakes detected: 984 of 984
+- Injected mistakes detected: 966 of 966
 - Unexpected extra findings: 0 (target 0)
   - repeat: 328/328
   - outside_range: 328/328
-  - off_middle: 328/328
+  - off_middle: 310/310
 
 ## Hint-level gating
 
@@ -36,4 +36,5 @@ Hit rate: 100%
 
 ## Live model sample
 
-10/10 hints were AI-written and passed the guardrail; 0 fell back to the deterministic hint.
+9/10 hints were AI-written and passed the guardrail; 1 fell back to the deterministic hint.
+- fallback reason: hint mentions numbers it was not given

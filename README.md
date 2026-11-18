@@ -118,53 +118,76 @@ Tested with Python 3.13.
 5. **Run the tests and the evaluation harness** (neither needs a key):
    ```
    pytest
+   python demo.py                    # reproduces sample interactions 1-3
    python eval_harness.py            # writes eval_report.md
    python eval_harness.py --live 6   # optional: samples 6 real Gemini hints (uses your API quota)
    ```
 
 ## Sample Interactions
 
-All three examples use Normal difficulty (range 1-100, 8 attempts) with the secret number 37. The outputs below were produced by running the real code with no API key, so the wording is the built-in fallback. With a Gemini key the same hints are written by the model in its own words, and the validator enforces the same rules.
+Examples 1-3 are the real output of `python demo.py`, which runs the real coach code with the model switched off, so the wording is the built-in fallback and the result is identical on every run (the same output is saved in [assets/demo_output.txt](assets/demo_output.txt)). With a Gemini key the app writes the hints in the model's own words, and the validator enforces the same rules. Example 4 is a real run with Gemini.
 
 ### Example 1: The hint ladder
-- **Input:** the player guesses `50` and gets "Too High". They then click **Ask Coach** three times.
-- **Output:**
+Three clicks on **Ask Coach** give a stronger hint each time. Costs are taken from the score, and the button is disabled after the third hint. The ladder starts again after the player's next valid guess.
 
-  | Click | Hint | Cost | Notes used |
-  |---|---|---|---|
-  | 1 | **Nudge**: "Your last guess was too high, so every larger number is ruled out. Where does the possible range end now?" | free | narrowing_range, learning_from_feedback |
-  | 2 | **Range**: "The secret is between 1 and 49 (inclusive)." | -5 pts | narrowing_range, binary_search, learning_from_feedback |
-  | 3 | **Best move**: "The secret is between 1 and 49. Guessing the middle, 25, removes half of the possibilities." plus *Suggested guess: 25* | -15 pts | narrowing_range, binary_search, learning_from_feedback |
-
-  After the third hint the button is disabled. The hint ladder starts again after the player's next valid guess.
+```
+INPUT   Normal (1-100), secret 37. Guesses so far: 50 (too high). Ask Coach x3
+OUTPUT  Hint 1/3 · Nudge: Your last guess was too high, so every larger number is ruled out. Where does the possible range end now?
+        Based on: narrowing_range, learning_from_feedback · built-in fallback · cost: free
+OUTPUT  Hint 2/3 · Range: The secret is between 1 and 49 (inclusive).
+        Based on: narrowing_range, binary_search, learning_from_feedback · built-in fallback · cost: -5 pts
+OUTPUT  Hint 3/3 · Best move: The secret is between 1 and 49. Guessing the middle, 25, removes half of the possibilities.
+        Suggested guess: 25
+        Based on: narrowing_range, binary_search, learning_from_feedback · built-in fallback · cost: -15 pts
+```
 
 ### Example 2: Review my guesses
-- **Input:** the player guesses `50`, `90`, `90`, `45`, then clicks **Review my guesses**.
-- **Output:** "Guess #2 (90) could not be the secret: you already knew it was between 1 and 49. Guess #3 (90) repeated an earlier guess, which cannot teach you anything new. Guess #4 (45) was far from the middle of 1-49; guessing near 25 would have removed more possibilities."
-  - Notes used: narrowing_range, avoid_repeats, worst_case_guesses.
-  - Review is free, and it appears automatically when the game ends. After a clean win (guesses `50`, `25`, `37`) it says: "Every guess so far was inside the possible range and reasonably close to the middle. You won in 3 guesses; with perfect binary search the worst case is 7."
+**Review my guesses** is free. It finds repeated guesses, guesses already ruled out, and guesses far from the middle, and it appears automatically when the game ends.
+
+```
+INPUT   Guesses: 50, 90, 90, 45. Click 'Review my guesses'
+OUTPUT  Guess #2 (90) could not be the secret: you already knew it was between 1 and 49. Guess #3 (90) repeated an earlier guess, which cannot teach you anything new. Guess #4 (45) was far from the middle of 1-49; guessing near 25 would have removed more possibilities.
+        Based on: narrowing_range, avoid_repeats, worst_case_guesses
+INPUT   Guesses: 50, 25, 37 (win)
+OUTPUT  Every guess so far was inside the possible range and reasonably close to the middle. You won in 3 guesses; with perfect binary search the worst case is 7.
+```
 
 ### Example 3: The guardrail catches an over-sharing answer
-- **Input:** the player has guessed `50` and asks for a Nudge. Suppose the model drafts: "Think about bounds, maybe 25." (this exact case is covered in `tests/test_coach.py`).
-- **Output:** the validator rejects it because a Nudge must not contain numbers, and the player sees the deterministic nudge instead: "Your last guess was too high, so every larger number is ruled out. Where does the possible range end now?" The caption under the hint says "built-in fallback" and shows the reason the AI answer was not used.
+A Nudge must not contain numbers. When the (simulated) model drafts one that does, the validator rejects it and the player sees the built-in nudge, with the reason shown under the hint. This case is also covered in `tests/test_coach.py`.
+
+```
+INPUT   Guesses so far: 50. Ask Coach (Nudge). Model drafts: 'Think about bounds, maybe 25.'
+OUTPUT  Hint 1/3 · Nudge: Your last guess was too high, so every larger number is ruled out. Where does the possible range end now?
+        Based on: narrowing_range, learning_from_feedback · built-in fallback · cost: free
+        Reason AI answer not used: nudge must not contain numbers
+```
 
 ### Example 4: A real Gemini-written hint
-- **Input:** after several guesses in a live game (with `GEMINI_API_KEY` set), the player clicked **Ask Coach** three times.
-- **Output (AI-written by Gemini):**
-  > **Hint 1/3 · Nudge:** Since your last guess was too high, think about what that rules out. What numbers are now bigger than the secret?
-  >
-  > *Based on: narrowing_range, learning_from_feedback · AI-written · cost: free*
-  >
-  > **Hint 2/3 · Range:** The numbers still possible are anywhere from 84 to 92.
-  >
-  > *Based on: narrowing_range, binary_search, learning_from_feedback · AI-written · cost: -5 pts*
-  >
-  > **Hint 3/3 · Best move:** We know the secret is at least 84 and at most 92 based on our previous guesses. Let's use the binary search strategy and pick the middle number of this remaining range.
-  > **Suggested guess: 88**
-  >
-  > *Based on: narrowing_range, binary_search, learning_from_feedback · AI-written · cost: -15 pts*
+A live game with `GEMINI_API_KEY` set. The player's guesses 23, 33 and 83 were too low and 93 was too high, which leaves 84 to 92 possible. The text below was written by Gemini (copied from the app).
 
-  Each hint stays within its level's rules, which the validator enforces: the Nudge has no numbers, the Range hint states exactly the remaining range (84 to 92), and the Best move suggests one number inside that range (88, the middle).
+```
+INPUT   Normal (1-100), secret 84. Guesses so far: 23, 33, 83 (too low), 93 (too high). Ask Coach x3
+OUTPUT  Hint 1/3 · Nudge: Since your last guess was too high, think about what that rules out. What numbers are now bigger than the secret?
+        Based on: narrowing_range, learning_from_feedback · AI-written · cost: free
+OUTPUT  Hint 2/3 · Range: The numbers still possible are anywhere from 84 to 92.
+        Based on: narrowing_range, binary_search, learning_from_feedback · AI-written · cost: -5 pts
+OUTPUT  Hint 3/3 · Best move: We know the secret is at least 84 and at most 92 based on our previous guesses. Let's use the binary search strategy and pick the middle number of this remaining range.
+        Suggested guess: 88
+        Based on: narrowing_range, binary_search, learning_from_feedback · AI-written · cost: -15 pts
+INPUT   Guess 88: too high (84 to 87 left). Guess 84: correct. A win in 6 of the 8 attempts.
+```
+
+Each hint stays within its level's rules, which the validator enforces: the Nudge has no numbers, the Range hint states exactly the remaining range (84 to 92), and the Best move suggests one number inside that range (88, the middle).
+
+**What "Based on" means:** it lists the knowledge-base notes the coach retrieved for this situation and gave to the model, so you can see what each hint was grounded in. The retrieved notes change with the game situation (this is real output of the retriever, with all notes available as at the Best move level):
+
+| Situation | Notes retrieved |
+|---|---|
+| Start of the game, no guesses yet | first_guess, binary_search, scoring |
+| Mid-game after 4 guesses (the Example 4 run) | narrowing_range, binary_search, learning_from_feedback |
+| Only 2 attempts left | few_attempts_left, small_range, narrowing_range |
+| Three or fewer numbers left | narrowing_range, binary_search, small_range |
+| Player repeated a guess | avoid_repeats, narrowing_range, binary_search |
 
 
 ## Design Decisions
@@ -180,7 +203,29 @@ All three examples use Normal difficulty (range 1-100, 8 attempts) with the secr
 
 ## Testing Summary
 
-**Summary:** 76 of 76 automated tests passed, and the evaluation harness measured 100% wins in simulated games, 100% retrieval hits on labelled cases, and 0 level-rule violations. The weak spots it found early (retrieval at 80%, a stale button) were fixed after adding the situation weighting and the pre-render check. Full numbers are in [eval_report.md](eval_report.md) (run `python eval_harness.py` to regenerate it).
+**Summary:** 77 of 77 automated tests passed, and the evaluation harness measured 100% wins in simulated games, 100% retrieval hits on labelled cases, and 0 level-rule violations. The weak spots it found early (retrieval at 80%, a stale button) were fixed after adding the situation weighting and the pre-render check. Full numbers are in [eval_report.md](eval_report.md) (run `python eval_harness.py` to regenerate it).
+
+**Reproducible command output** (full logs: [assets/test_output.txt](assets/test_output.txt), [assets/eval_harness_output.txt](assets/eval_harness_output.txt), [assets/demo_output.txt](assets/demo_output.txt)):
+
+```
+$ python -m pytest -q
+77 passed
+
+$ python eval_harness.py
+| Difficulty | Games | Win rate | Avg guesses | Max guesses | Invalid suggestions |
+| Easy       | 20    | 100%     | 3.70        | 5           | 0                   |
+| Normal     | 100   | 100%     | 5.80        | 7           | 0                   |
+| Hard       | 50    | 100%     | 4.86        | 6           | 0                   |
+Determinism: 0 mismatches across repeated runs
+Retrieval hit rate: 100%
+Perfect binary-search players flagged: 0 of 170 games (target 0)
+Injected mistakes detected: 966 of 966
+Fallback hints that obey their level's rules: 297 of 297
+Over-sharing model answers blocked at levels 1-2: 198 of 198
+
+$ python eval_harness.py --live 10     (with a real GEMINI_API_KEY)
+10/10 hints were AI-written and passed the guardrail; 0 fell back to the deterministic hint.
+```
 
 **How reliability is checked:** automated tests (`pytest`), a measurement harness (`eval_harness.py`), and error handling that records what failed and why. Every time a model answer is rejected or the API call fails, the coach swaps in a fallback hint and keeps the reason, which the app shows under the hint (for example "AI unavailable: nudge must not contain numbers"). The optional `--live` run also checks real Gemini answers against the same validator.
 
@@ -188,7 +233,7 @@ All three examples use Normal difficulty (range 1-100, 8 attempts) with the secr
   - **Simulated games:** following the coach's suggested guess won 100% of games on every difficulty, covering every possible secret (Easy 3.70 average guesses, Normal 5.80, Hard 4.86), with 0 invalid suggestions.
   - **Determinism:** the same game state gave the same hint every time.
   - **Retrieval:** the right note was in the top 3 for all 5 labelled situations (100%).
-  - **Mistake detection:** perfect players were never flagged (0 of 170 games), and all 984 injected mistakes were caught.
+  - **Mistake detection:** perfect players were never flagged (0 of 170 games), and all 966 injected mistakes were caught.
   - **Level gating:** all 297 fallback hints obeyed their level's rules, and all 198 over-sharing model answers at levels 1-2 were blocked.
   - **No API key needed:** the whole suite runs offline, because the model call is injectable.
   - **Live Gemini sample:** `python eval_harness.py --live 10` tried 10 real hints at random levels (1-3). All 10 were AI-written and passed the validator, and none fell back to the deterministic hint. This is a small sample, so it shows the prompts work, not that the model never breaks the rules.

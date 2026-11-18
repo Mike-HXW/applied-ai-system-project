@@ -181,6 +181,12 @@ def test_analyze_flags_each_kind_of_mistake():
     assert kinds == ["outside_range", "repeat", "off_middle"]
 
 
+def test_winning_guess_is_never_flagged():
+    # 84 wins from the range 84-87; it is not "far from the middle" of anything
+    history = [23, 33, 83, 93, 88, 84]
+    assert all(f["guess"] != 84 for f in analyze_guesses(history, 84, 1, 100))
+
+
 def test_analyze_ignores_invalid_input_and_perfect_play():
     assert analyze_guesses(["abc", 50, "999", 25], 30, 1, 100) == []
 

@@ -1,0 +1,22 @@
+=== Example 1: the hint ladder ===
+INPUT   Normal (1-100), secret 37. Guesses so far: 50 (too high). Ask Coach x3
+OUTPUT  Hint 1/3 · Nudge: Your last guess was too high, so every larger number is ruled out. Where does the possible range end now?
+        Based on: narrowing_range, learning_from_feedback · built-in fallback · cost: free
+OUTPUT  Hint 2/3 · Range: The secret is between 1 and 49 (inclusive).
+        Based on: narrowing_range, binary_search, learning_from_feedback · built-in fallback · cost: -5 pts
+OUTPUT  Hint 3/3 · Best move: The secret is between 1 and 49. Guessing the middle, 25, removes half of the possibilities.
+        Suggested guess: 25
+        Based on: narrowing_range, binary_search, learning_from_feedback · built-in fallback · cost: -15 pts
+
+=== Example 2: review my guesses ===
+INPUT   Guesses: 50, 90, 90, 45. Click 'Review my guesses'
+OUTPUT  Guess #2 (90) could not be the secret: you already knew it was between 1 and 49. Guess #3 (90) repeated an earlier guess, which cannot teach you anything new. Guess #4 (45) was far from the middle of 1-49; guessing near 25 would have removed more possibilities.
+        Based on: narrowing_range, avoid_repeats, worst_case_guesses
+INPUT   Guesses: 50, 25, 37 (win)
+OUTPUT  Every guess so far was inside the possible range and reasonably close to the middle. You won in 3 guesses; with perfect binary search the worst case is 7.
+
+=== Example 3: the guardrail rejects an over-sharing model answer ===
+INPUT   Guesses so far: 50. Ask Coach (Nudge). Model drafts: 'Think about bounds, maybe 25.'
+OUTPUT  Hint 1/3 · Nudge: Your last guess was too high, so every larger number is ruled out. Where does the possible range end now?
+        Based on: narrowing_range, learning_from_feedback · built-in fallback · cost: free
+        Reason AI answer not used: nudge must not contain numbers

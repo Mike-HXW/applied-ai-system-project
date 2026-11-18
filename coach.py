@@ -356,7 +356,8 @@ def analyze_guesses(history, secret, low, high):
             kind = "repeat"
         elif not lo <= item <= hi:
             kind = "outside_range"
-        elif size > 3 and _worst_remaining(item, lo, hi) >= 1.5 * _worst_remaining(mid, lo, hi):
+        elif (size > 3 and item != secret  # a winning guess is never a mistake
+              and _worst_remaining(item, lo, hi) >= 1.5 * _worst_remaining(mid, lo, hi)):
             kind = "off_middle"
         if kind:
             findings.append({"turn": turn, "guess": item, "kind": kind,
